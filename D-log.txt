@@ -1,0 +1,81 @@
+1.初识化，配置启动命令，需要安装的包
+
+ "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "express-async-errors": "^3.1.1",
+    "jsonwebtoken": "^9.0.2",
+    "md5": "^2.3.0",
+    "multer": "^1.4.5-lts.1",
+    "mysql2": "^3.6.2",
+    "node-xlsx": "^0.23.0",
+    "nodemailer": "^6.9.7",
+    "uuid": "^9.0.1"
+
+
+2.创建服务器 监听端口号为3000
+
+        const express = require("express");
+        const app = express();
+        const http = require("http");
+        const server = http.createServer(app);
+        server.listen(3000, "0.0.0.0", () => {
+          console.log("server started");
+        });
+
+3.构建静态目录 public
+
+        //静态目录
+        app.use("./public", express.static(path.join(__dirname, "./public")));
+
+4.构建返回格式
+
+  /**
+ * 返回值对象，返回值每次返回这个特定的对象
+ * code代表返回的代码，1代表本次操作是成功的，0代表本次操作是失败的
+ * message代表服务器返回的消息
+ * data代表服务器返回的数据
+ */
+class ResultJson {
+  constructor(status, msg, data = {}) {
+    this.code = Number(status);
+    this.msg = msg;
+    this.data = data;
+  }
+}
+module.exports = ResultJson;
+
+
+5.构建路由
+  我们使用loadRouter 
+  /**
+ * app加载路由管理对象的方法
+ */
+const fs = require("fs");
+const path = require("path");
+const loadRoutes = app => {
+  let arr = fs.readdirSync(path.join(__dirname, "../router"));
+  for (const item of arr) {
+    app.use(
+      `/${item.replace("Router.js", "")}`,
+      require(path.join(__dirname, "../router", item))
+    );
+  }
+};
+module.exports = loadRoutes;
+
+创建路由
+
+5.config AppConfig.js
+
+
+5.DBUtils
+
+6.创建BaseService
+
+7.创建每个路由的Service
+
+8.全局异常处理
+
+$ npm install express-async-errors
+
