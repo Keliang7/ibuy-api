@@ -34,7 +34,7 @@ app.use((err, req, resp, next) => {
   next();
 });
 const buildServiceFactory = require("./factory/buildServiceFactory");
-server.listen(3000, "0.0.0.0", () => {
+server.listen(3000, () => {
   buildServiceFactory();
-  console.log("started http://0.0.0.0:3000/");
+  console.log("Server is running on http://localhost:3000");
 });

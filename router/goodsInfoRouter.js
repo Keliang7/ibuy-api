@@ -11,15 +11,17 @@ const upload = multer({
 });
 router.currentService = ServiceFactory.createGoodsInfoService();
 
-router.get("/getListByPage", async (req, resp) => {
-  let pageList = await ServiceFactory.createGoodsInfoService().getListByPage(
+router.get("/", async (req, resp) => {
+  const pageList = await ServiceFactory.createGoodsInfoService().getListByPage(
     req.query
   );
-  let temp_list = pageList.list.map(i => {
-    return { ...i, goods_photo: i.goods_photo.split(",") };
-  });
-  pageList.list = temp_list;
-  resp.json(new ResultJson(0, "数据获取成功", pageList));
+  pageList.list = pageList.list.map(i => ({
+    ...i,
+    goods_photo: i.goods_photo.split(","),
+  }));
+  resp.json(
+    new ResultJson(!!pageList, pageList ? "查询成功" : "查询失败", pageList)
+  );
 });
 router.post("", upload.array("goods_photo", 9), async (req, resp) => {
   let postImgList = [];
@@ -27,17 +29,15 @@ router.post("", upload.array("goods_photo", 9), async (req, resp) => {
     req.files.forEach(file => {
       let newFileName = uuidv4() + file.originalname;
       fs.renameSync(file.path, path.join(file.destination, newFileName));
-      postImgList.push(`http://localhost:3000/public/goodsImg/${newFileName}`);
+      postImgList.push(`/public/goodsImg/${newFileName}`);
     });
   }
   let result = await ServiceFactory.createGoodsInfoService().add({
     ...req.body,
     goods_photo: postImgList.join(","),
   });
-  let temp = result.affectedRows > 0;
-  resp.json(
-    new ResultJson(temp ? 0 : -1, temp ? "添加数据成功" : "添加数据失败")
-  );
+  let flag = result.affectedRows > 0;
+  resp.json(new ResultJson(flag, flag ? "添加数据成功" : "添加数据失败"));
 });
 router.put("", upload.array("goods_photo", 9), async (req, resp) => {
   let oldImgStr = req.body.oldImg;
@@ -46,7 +46,7 @@ router.put("", upload.array("goods_photo", 9), async (req, resp) => {
     req.files.forEach(file => {
       let newFileName = uuidv4() + file.originalname;
       fs.renameSync(file.path, path.join(file.destination, newFileName));
-      postImgList.push(`http://localhost:3000/public/goodsImg/${newFileName}`);
+      postImgList.push(`/public/goodsImg/${newFileName}`);
     });
   }
   console.log({

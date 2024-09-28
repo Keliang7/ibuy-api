@@ -8,15 +8,7 @@ const path = require("path");
 // const jwt = require("jsonWebtoken");
 const APPConfig = require("../config/APPConfig");
 router.currentService = ServiceFactory.createUserInfoService();
-router.get("/aaa", async (req, resp) => {
-  resp.json(new ResultJson(true, "数据获取成功", "部署成功了"));
-});
-router.get("/getListByPage", async (req, resp) => {
-  let pageList = await ServiceFactory.createUserInfoService().getListByPage(
-    req.query
-  );
-  resp.json(new ResultJson(0, "数据获取成功", pageList));
-});
+//增
 router.post("", async (req, resp) => {
   const base64 = req.body.avatar;
   //这里一定要将base64进行裁剪 ，nodejs不需要前面的东西
@@ -27,14 +19,42 @@ router.post("", async (req, resp) => {
     base64Str,
     "base64"
   );
-  let addRes = await ServiceFactory.createUserInfoService().add({
+  let res = await ServiceFactory.createUserInfoService().add({
     ...req.body,
-    avatar: `http://localhost:3000/upload/avatar/${fileName}`,
+    avatar: `/upload/avatar/${fileName}`,
   });
-
-  resp.json(new ResultJson(0, "添加成功"));
+  let flag = typeof res === "object";
+  resp.json(new ResultJson(flag, flag ? "添加成功" : "账号已存在"));
 });
-
+//改
+router.put("", async (req, res) => {
+  let { avatar } = req.body;
+  if (!avatar.startsWith("/upload/avatar/")) {
+    console.log("走了里面");
+    // 先删除旧的头像
+    let oldAvatar = await ServiceFactory.createUserInfoService()
+      .findById(req.body.id)
+      .then(item => item.avatar);
+    if (oldAvatar && oldAvatar.startsWith("/upload/avatar/")) {
+      fs.unlinkSync(path.join(__dirname, "../", oldAvatar));
+    }
+    // 再将 base64 写入文件
+    const base64Str = avatar.replace(/^data:image\/\w+;base64,/, "");
+    const fileName = uuidv4() + ".png";
+    fs.writeFileSync(
+      path.join(__dirname, "../upload/avatar", fileName),
+      base64Str,
+      "base64"
+    );
+    avatar = `/upload/avatar/${fileName}`;
+  }
+  let updateRes = await ServiceFactory.createUserInfoService().update({
+    ...req.body,
+    avatar,
+  });
+  let flag = updateRes.affectedRows > 0;
+  res.json(new ResultJson(flag, flag ? "修改成功" : "修改失败"));
+});
 router.post("/checkLogin", async (req, resp) => {
   let result = await ServiceFactory.createUserInfoService().checkLogin(
     req.body

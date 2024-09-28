@@ -23,7 +23,7 @@ class BaseService extends DBUtils {
     this.currentTable = "";
   }
   /**
-   *
+   * @description 增加
    * @param {Object} obj
    * @returns {Object} 查询的结果
    */
@@ -35,19 +35,17 @@ class BaseService extends DBUtils {
     )},c_time) values (${new Array(keys.length)
       .fill("?")
       .join(",")},"${new Date().toLocaleString().replaceAll("/", "-")}")`;
-    let result = await this.executeSql(sql, values);
-    return result;
+    return await this.executeSql(sql, values);
   }
   /**
    * @description 删除
-   * @param {string} ids
+   * @param {string[]} ids
    * @returns {Object} 执行的结果
    */
-  async deleteById(ids) {
+  async delete(ids) {
     const placeholders = ids.map(() => "?").join(",");
     let sql = `update ${this.currentTable} set is_del = true where id IN (${placeholders}) `;
-    let result = await this.executeSql(sql, ids);
-    return result;
+    return await this.executeSql(sql, ids);
   }
   /**
    * @description 修改
@@ -66,21 +64,44 @@ class BaseService extends DBUtils {
     }
     sql += ` where id = ? and is_del = false`;
     params.push(obj.id);
-    let result = await this.executeSql(sql, params);
-    return result;
+    return await this.executeSql(sql, params);
   }
-  //查
+  /**
+   * @description 通过id查询
+   * @param {string} id
+   * @returns {Object} 执行的结果
+   */
   async findById(id) {
     let sql = `select * from ${this.currentTable} where id = ? and is_del = false`;
-    let result = await this.executeSql(sql, [id]);
-    return result;
+    return await this.executeSql(sql, [id]);
   }
-  //查所有
+  /**
+   * @description 查询所有
+   * @returns {Object} 执行的结果
+   */
   async getAllList() {
     let sql = `select * from ${this.currentTable} where is_del = false `;
     return this.executeSql(sql);
   }
-  //分页查询
+  /**
+   * 根据分页条件获取列表数据
+   * @async
+   * @param {Object} params - 查询条件
+   * @param {number} [params.pageIndex=1] - 当前页码，默认值为 1
+   * @param {number} [params.pageSize=10] - 每页数据量，默认值为 10
+   * @param {string} [params.id=""] - 可选的 ID 过滤条件，默认空字符串
+   * @param {string} [params.c_time=""] - 可选的创建时间过滤条件，默认空字符串
+   * @param {string} [params.u_time=""] - 可选的更新时间过滤条件，默认空字符串
+   * @param {Object} [params.other] - 其他模糊查询条件的键值对
+   * @returns {Promise<Object>} 返回包含列表和总数的对象
+   * @returns {Object[]} returns.list - 查询到的数据列表
+   * @returns {number} returns.total - 数据总数
+   *
+   * @description
+   * 该函数用于通过分页条件查询数据表中的数据，支持模糊查询和分页功能。它会构建基础的 SQL 查询，并根据提供的其他条件进行筛选。
+   * - 模糊查询会根据 `other` 对象中的键值对生成 SQL `LIKE` 语句。
+   * - 返回的数据包含当前页的数据列表和数据总数。
+   */
   async getListByPage({
     pageIndex = 1,
     pageSize = 10,
@@ -97,19 +118,21 @@ class BaseService extends DBUtils {
         likeConditions.push(`${key} LIKE '%${other[key]}%'`);
       }
     }
-
     if (likeConditions.length > 0) {
       baseSql += ` AND ${likeConditions.join(" AND ")}`;
     }
+    // 按照 c_time 降序排列，确保新增的记录在第一页
+    baseSql += ` ORDER BY c_time DESC`;
+    // 分页查询
     let listSql =
-      baseSql + ` LIMIT ${pageSize} OFFSET ${(pageIndex - 1) * pageSize} `;
-    let totalSql = ` SELECT COUNT(*) AS total FROM (${baseSql}) list `;
-
+      baseSql + ` LIMIT ${pageSize} OFFSET ${(pageIndex - 1) * pageSize}`;
+    // 获取总数
+    let totalSql = `SELECT COUNT(*) AS total FROM (${baseSql}) list`;
     let list = await this.executeSql(listSql);
     let total = await this.executeSql(totalSql);
     return { list, ...total[0] };
   }
-  //分页
+  // 构建查询条件
   createQuery(tableName = this.currentTable) {
     const that = this;
     let obj = {
@@ -173,7 +196,7 @@ class BaseService extends DBUtils {
         }
         return this;
       },
-      ////查询的时候查哪一页
+      //查询的时候查哪一页
       setPageIndex(pageindex) {
         this.pageIndex = pageindex;
         return this;
